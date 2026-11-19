@@ -23,7 +23,7 @@ class Position:
     def is_valid(self) -> bool:
         """Contrôles de base utilisés par le prétraitement (phase 2)."""
         return (
-            100_000_000 <= self.mmsi <= 999_999_999
+            200_000_000 <= self.mmsi <= 775_999_999   # codes pays (MID) des navires
             and -90.0 <= self.lat <= 90.0
             and -180.0 <= self.lon <= 180.0
             and not (self.lat == 0.0 and self.lon == 0.0)

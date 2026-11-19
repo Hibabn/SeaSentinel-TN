@@ -20,6 +20,9 @@ def test_invalid_positions():
     assert not make(lat=0.0, lon=0.0).is_valid()      # « Null Island »
     assert not make(sog=102.3).is_valid()             # valeur AIS « non disponible »
     assert not make(cog=400.0).is_valid()
+    assert not make(mmsi=992198002).is_valid()   # aide à la navigation
+    assert not make(mmsi=111219515).is_valid()   # aéronef SAR
+    assert not make(mmsi=970012001).is_valid()   # balise AIS-SART
 
 
 def test_row_roundtrip():
