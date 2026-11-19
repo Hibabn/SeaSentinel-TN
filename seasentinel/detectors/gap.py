@@ -28,6 +28,12 @@ from ..positions_io import load_truth, read_positions_csv
 DEFAULT_MIN_GAP_S = 3600.0   # 1 h de silence
 EDGE_MARGIN_DEG = 0.1        # ~11 km : zone « bord de carte »
 
+# Gravité selon la distance entre la dernière et la première position.
+# Seuils choisis d'après la distribution observée sur la journée DMA du 16/11/2026
+# (96 % des gaps < 1 km : navires à quai/au mouillage). Explicites et modifiables.
+SEVERITY_LOW_KM = 1.0
+SEVERITY_HIGH_KM = 20.0
+
 BBox = tuple[float, float, float, float]  # lat_min, lat_max, lon_min, lon_max
 
 
@@ -50,6 +56,14 @@ class GapAlert:
     @property
     def mmsis(self) -> list[int]:
         return [self.mmsi]
+
+    @property
+    def severity(self) -> str:
+        """'faible' : réapparaît au même endroit (quai, mouillage, couverture) ;
+        'moyenne' : s'est déplacé ; 'elevee' : s'est déplacé loin pendant le silence."""
+        if self.jump_km < SEVERITY_LOW_KM:
+            return "faible"
+        return "elevee" if self.jump_km >= SEVERITY_HIGH_KM else "moyenne"
 
 
 def _near_edge(lat: float, lon: float, bbox: BBox, margin: float) -> bool:
@@ -130,8 +144,10 @@ def main() -> None:
     dt = time.perf_counter() - t0
     print(f"Positions analysées : {n:,}  en {dt:.1f} s  ({n / dt:,.0f} pos/s)")
     print(f"Gaps détectés       : {len(alerts):,}  sur {len({g.mmsi for g in alerts}):,} navires")
-    for g in sorted(alerts, key=lambda g: -g.duration_s)[:10]:
-        print(f"  MMSI {g.mmsi}  {g.duration_s / 3600:6.2f} h   saut {g.jump_km:7.1f} km")
+    from collections import Counter
+    print("Gravité             :", dict(Counter(g.severity for g in alerts)))
+    for g in sorted(alerts, key=lambda g: (g.severity == "faible", -g.jump_km))[:10]:
+        print(f"  [{g.severity:<7}] MMSI {g.mmsi}  {g.duration_s / 3600:6.2f} h   saut {g.jump_km:7.1f} km")
     if a.truth:
         print("Évaluation          :", evaluate(alerts, load_truth(a.truth), "gap"))
     if a.output:
